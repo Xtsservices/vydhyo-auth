@@ -1,0 +1,39 @@
+{
+  "name": "vydhyo-auth",
+  "version": "1.0.0",
+  "description": "vydhyo auth is used to authenticate the user either valid or not",
+  "main": "app.js",
+  "scripts": {
+    "test": "npm test",
+    "start": "node app.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Xtsservices/vydhyo-auth.git"
+  },
+  "keywords": [
+    "Authentication"
+  ],
+  "author": "XTSServices",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Xtsservices/vydhyo-auth/issues"
+  },
+  "homepage": "https://github.com/Xtsservices/vydhyo-auth#readme",
+  "dependencies": {
+    "axios": "^1.6.7",
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.6",
+    "dotenv": "^16.3.1",
+    "express": "^4.21.2",
+    "http-proxy-middleware": "^3.0.5",
+    "joi": "^17.13.3",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^7.5.0",
+    "pino": "^9.6.0",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "pino-pretty": "^13.0.0"
+  }
+}
