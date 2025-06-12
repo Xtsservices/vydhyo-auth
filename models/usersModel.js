@@ -24,7 +24,7 @@ const userSchema = new mongoose.Schema({
     enum: ['active', 'inActive'],
     default: 'inActive'
   },
-  refreshToken: { type: String }, 
+  refreshToken: { type: String },
   language: {
     type: String,
     enum: ['en', 'hi', 'tel'],
@@ -39,7 +39,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: null
   },
-  profilepic: String,
+  profilepic: {
+    mimeType: String,
+    data: String,
+  },
   gender: {
     type: String,
     default: null
@@ -52,7 +55,7 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: null
   },
-  maritalStatus : {
+  maritalStatus: {
     type: String,
     default: null
   },
@@ -63,7 +66,7 @@ const userSchema = new mongoose.Schema({
   isVerified: {
     type: Boolean,
     default: false
-  },  
+  },
   createdBy: {
     type: String,
     default: null
