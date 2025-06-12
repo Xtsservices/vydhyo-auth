@@ -64,14 +64,14 @@ exports.refreshToken = async (req, res) => {
   if (!token) return res.status(401).json({ message: 'Unauthorized... No refresh token provided' });
   try {
     const decoded = jwt.verify(token, process.env.REFRESH_TOKEN_SECRET);
-    const user = await User.findOne({'userId': decoded.userId});
+    const user = await User.findOne({'userId': decoded.userid});
     if (!user || user.refreshToken !== token) return  res.status(403).json({ message: "Forbidden...", userId: user.userId});
 
-    const payload = { id: user.userId, role: user.role, mobile: user.mobile };
+    const payload = { userid: user.userId, role: user.role, mobile: user.mobile };
     const newAccessToken = generateAccessToken(payload);
     return res.status(200).json({ accessToken: newAccessToken });
   } catch (err) {
-    return res.status(403).json({ message: 'Forbidden... Invalid refresh token' });
+    return res.status(403).json({ message: 'Forbidden... Invalid refresh token', Error: err.message });
   }
 };
 
