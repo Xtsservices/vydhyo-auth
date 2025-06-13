@@ -9,6 +9,13 @@ const userSchema = new mongoose.Schema({
     lowercase: true,
     trim: true
   },
+  specialization: [
+    {
+      id: { type: String, required: true },
+      name: { type: String, required: true }      
+    }
+  ], 
+  experience: Number,
   mobile: {
     type: String,
     lowercase: true,
@@ -16,7 +23,6 @@ const userSchema = new mongoose.Schema({
   },
   userId: {
     type: String,
-    unique: true,
     required: true
   },
   status: {
@@ -24,7 +30,7 @@ const userSchema = new mongoose.Schema({
     enum: ['active', 'inActive'],
     default: 'inActive'
   },
-  refreshToken: { type: String },
+  refreshToken: { type: String }, 
   language: {
     type: String,
     enum: ['en', 'hi', 'tel'],
@@ -35,10 +41,6 @@ const userSchema = new mongoose.Schema({
     enum: ['parent', 'child', 'self', 'other'],
     default: 'self'
   },
-  parentid: {
-    type: String,
-    default: null
-  },
   profilepic: {
     mimeType: String,
     data: String,
@@ -48,14 +50,14 @@ const userSchema = new mongoose.Schema({
     default: null
   },
   DOB: {
-    type: Date,
+    type: String,
     default: null
   },
   bloodgroup: {
     type: String,
     default: null
   },
-  maritalStatus: {
+  maritalStatus : {
     type: String,
     default: null
   },
@@ -66,7 +68,7 @@ const userSchema = new mongoose.Schema({
   isVerified: {
     type: Boolean,
     default: false
-  },
+  },  
   createdBy: {
     type: String,
     default: null
