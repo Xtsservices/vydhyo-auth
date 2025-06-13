@@ -31,7 +31,7 @@ exports.login = async (req, res) => {
     user = new User({
       mobile,
       role: userType,
-      userId,
+      userId: userId,
       language,
       status: 'inActive',
       isVerified: false,
