@@ -16,8 +16,8 @@ exports.validateOtp = async (req, res) => {
   const accessToken = generateAccessToken(payload);
   const refreshToken = generateRefreshToken(payload);
 
-  user.refreshToken = refreshToken;
-  await user.save();
+  // user.refreshToken = refreshToken;
+  await User.findOneAndUpdate({ userId }, { refreshToken });
 
   return res.status(200).json({ message: 'OTP verified', accessToken });
 }
