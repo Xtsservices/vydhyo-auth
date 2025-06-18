@@ -9,13 +9,20 @@ const userSchema = new mongoose.Schema({
     lowercase: true,
     trim: true
   },
-  specialization: [
-    {
-      id: { type: String, required: true },
-      name: { type: String, required: true }      
-    }
-  ], 
-  experience: Number,
+  specialization: {
+    id: { type: String, required: true },
+    name: { type: String, required: true },
+    experience: { type: Number, required: true },
+    drgreeCertificate: {
+      mimeType: String,
+      data: String,
+    },
+    specializationCertificate: {
+      mimeType: String,
+      data: String,
+    },
+  },
+  medicalRegistrationNumber: { type: String, required: true },
   mobile: {
     type: String,
     lowercase: true,
@@ -27,11 +34,25 @@ const userSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['active', 'inActive'],
     default: 'inActive'
   },
-  refreshToken: { type: String }, 
-  language: {
+  consultationModeFee: [{
+    type: { type: String, required: true },
+    fee: { type: Number, default: 0 },
+    currency: { type: String, default: 'INR' }
+  }],
+  bankDetails: {
+    accountNumber: { type: String, default: null },
+    ifscCode: { type: String, default: null },
+    bankName: { type: String, default: null },
+    accountHolderName: { type: String, default: null }
+  },
+  refreshToken: { type: String },
+  spokenLanguage: {
+    type: [String],
+    default: [],
+  },
+  appLanguage: {
     type: String,
     enum: ['en', 'hi', 'tel'],
     default: 'en'
@@ -57,7 +78,7 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: null
   },
-  maritalStatus : {
+  maritalStatus: {
     type: String,
     default: null
   },
@@ -68,7 +89,8 @@ const userSchema = new mongoose.Schema({
   isVerified: {
     type: Boolean,
     default: false
-  },  
+  },
+  rejectionReason:{ type: String,default:null},
   createdBy: {
     type: String,
     default: null
@@ -87,4 +109,4 @@ const userSchema = new mongoose.Schema({
   }
 });
 
-module.exports = mongoose.model('Users', userSchema);
+module.exports = mongoose.model('User', userSchema);
