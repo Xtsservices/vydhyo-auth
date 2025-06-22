@@ -1,8 +1,9 @@
 const User = require('../models/usersModel');
 const OTPVerification = require('../models/otpModels');
 const jwt = require('jsonwebtoken');
-const { v4: uuidv4 } = require('uuid');
 const { generateAccessToken, generateRefreshToken } = require('../utils/token');
+const Sequence = require("../sequence/sequenceSchema");
+const { SEQUENCE_PREFIX } = require('../utils/constants')
 
 exports.validateOtp = async (req, res) => {
   const { userId, OTP: inputOtp } = req.body;
@@ -12,7 +13,7 @@ exports.validateOtp = async (req, res) => {
   if (latestOTPRecord.otp !== inputOtp) return res.status(400).json({ message: 'Invalid OTP' });  
   
   const user = await User.findOne({ userId });
-  const payload = { userid: user.userId, mobile: user.mobile, role: user.role };
+  const payload = { userid: user.userId, mobile: user.mobile, role: user.role, appLanguage: user.appLanguage };
   const accessToken = generateAccessToken(payload);
   const refreshToken = generateRefreshToken(payload);
 
@@ -27,12 +28,13 @@ exports.login = async (req, res) => {
   let user = await User.findOne({ mobile });
 
   if (!user) {
-    const userId = uuidv4();
+    const counter = await Sequence.findByIdAndUpdate({ _id: SEQUENCE_PREFIX.USERSEQUENCE.USER_MODEL }, { $inc: { seq: 1 } }, { new: true, upsert: true });
+    const userId = SEQUENCE_PREFIX.USERSEQUENCE.SEQUENCE.concat(counter.seq);
     user = new User({
       mobile,
       role: userType,
       userId: userId,
-      language,
+      appLanguage: language,
       status: 'inActive',
       isVerified: false,
       isDeleted: false,
@@ -67,7 +69,7 @@ exports.refreshToken = async (req, res) => {
     const user = await User.findOne({'userId': decoded.userid});
     if (!user || user.refreshToken !== token) return  res.status(403).json({ message: "Forbidden...", userId: user.userId});
 
-    const payload = { userid: user.userId, role: user.role, mobile: user.mobile };
+    const payload = { userid: user.userId, role: user.role, mobile: user.mobile, appLanguage: user.appLanguage };
     const newAccessToken = generateAccessToken(payload);
     return res.status(200).json({ accessToken: newAccessToken });
   } catch (err) {
