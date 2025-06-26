@@ -20,7 +20,7 @@ exports.validateOtp = async (req, res) => {
   // user.refreshToken = refreshToken;
   await User.findOneAndUpdate({ userId }, { refreshToken });
 
-  return res.status(200).json({ message: 'OTP verified', accessToken });
+  return res.status(200).json({ message: 'OTP verified',"userData":user, accessToken });
 }
 
 exports.login = async (req, res) => {
