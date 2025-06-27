@@ -13,6 +13,11 @@ app.use(cookieParser());
 app.use(bodyParser.json());
 // Connect to MongoDB
 connectDB();
+
+// Create initial accounts on project load
+const createInitialAccounts = require('./utils/initAccounts');
+createInitialAccounts();
+
 // Routes
 app.use('/auth', authRoutes);
 
