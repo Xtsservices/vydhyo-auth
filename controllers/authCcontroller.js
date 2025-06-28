@@ -44,7 +44,13 @@ exports.login = async (req, res) => {
       updatedAt: new Date()
     });
     await user.save();
-  }
+  }else {
+      // Update existing user's language or userType if needed
+      user.appLanguage = language;
+      user.role = userType;
+      user.updatedAt = new Date();
+      await user.save();
+    }
 
   const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
   const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
