@@ -52,7 +52,8 @@ exports.login = async (req, res) => {
       await user.save();
     }
 
-  const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+  // const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+  const otpCode= '123456'
   const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
   const saveOtp = new OTPVerification({
     otp: otpCode,
