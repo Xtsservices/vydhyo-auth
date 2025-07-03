@@ -47,7 +47,6 @@ exports.login = async (req, res) => {
   }else {
       // Update existing user's language or userType if needed
       user.appLanguage = language;
-      user.role = userType;
       user.updatedAt = new Date();
       await user.save();
     }
