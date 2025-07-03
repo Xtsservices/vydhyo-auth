@@ -18,7 +18,7 @@ exports.validateOtp = async (req, res) => {
   const refreshToken = generateRefreshToken(payload);
 
   // user.refreshToken = refreshToken;
-  await User.findOneAndUpdate({ userId }, { refreshToken });
+  await User.findOneAndUpdate({ userId }, { refreshToken, isLoggedIn: true,  lastLogin: new Date() });
 
   return res.status(200).json({ message: 'OTP verified',"userData":user, accessToken });
 }
@@ -84,7 +84,58 @@ exports.refreshToken = async (req, res) => {
   }
 };
 
+
 exports.logout = async (req, res) => {
+  try {
+    const userId = req.headers.userid; // Assuming userId is passed in headers
+
+    // Validate userId
+    if (!userId) {
+      return res.status(400).json({
+        status: 'fail',
+        message: 'userId is required in headers'
+      });
+    }
+
+    // Find user
+    const user = await User.findOne({ userId });
+    if (!user) {
+      return res.status(404).json({
+        status: 'fail',
+        message: 'User not found'
+      });
+    }
+
+    // Update login status, clear refresh token, and set lastLogout
+    const updatedUser = await User.findOneAndUpdate(
+      { userId },
+      {
+        isLoggedIn: false,
+        refreshToken: null,
+        lastLogout: new Date(), // Set to current timestamp when logout is triggered
+
+      },
+      { new: true }
+    );
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'Logout successful',
+      data: {
+        userId: user.userId,
+        isLoggedIn: false,
+        lastLogout: updatedUser.lastLogout
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: 'fail',
+      message: error.message || 'Internal server error'
+    });
+  }
+};
+
+exports.logout2 = async (req, res) => {
   const token = req.headers.refreshtoken?.split(' ')[1];
   if (token) {
     const decoded = jwt.decode(token);
