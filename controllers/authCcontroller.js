@@ -27,7 +27,12 @@ exports.login = async (req, res) => {
   const { mobile, userType, language } = req.body;
   let user = await User.findOne({ mobile });
 
-  if (!user) {
+   // If user does not exist and no userType is provided, throw error
+  if (!user && !userType) {
+    return res.status(404).json({ message: 'User not found. Please register with a userType.' });
+  }
+  
+  if (!user && userType) {
     const counter = await Sequence.findByIdAndUpdate({ _id: SEQUENCE_PREFIX.USERSEQUENCE.USER_MODEL }, { $inc: { seq: 1 } }, { new: true, upsert: true });
     const userId = SEQUENCE_PREFIX.USERSEQUENCE.SEQUENCE.concat(counter.seq);
     user = new User({
