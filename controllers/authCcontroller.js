@@ -25,11 +25,10 @@ exports.validateOtp = async (req, res) => {
 
 exports.login = async (req, res) => {
   const { mobile, userType, language } = req.body;
-  let user = await User.findOne({ mobile });
-
+  let user = await User.findOne({ mobile , isDeleted:false });
    // If user does not exist and no userType is provided, throw error
   if (!user && !userType) {
-    return res.status(404).json({ message: 'User not found. Please register with a userType.' });
+    return res.status(404).json({ message: 'User not found' });
   }
   
   if (!user && userType) {
