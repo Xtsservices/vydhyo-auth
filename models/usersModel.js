@@ -107,7 +107,19 @@ const userSchema = new mongoose.Schema({
   updatedAt: {
     type: Date,
     default: Date.now
-  }
+  },
+   lastLogin: {
+    type: Date,
+    default: null
+  },
+  isLoggedIn: {
+    type: Boolean,
+    default: false
+  },
+  lastLogout: {
+    type: Date,
+    default: null
+  },
 });
 
 module.exports = mongoose.model('User', userSchema);

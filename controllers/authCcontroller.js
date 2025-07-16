@@ -18,8 +18,7 @@ exports.validateOtp = async (req, res) => {
   const refreshToken = generateRefreshToken(payload);
 
   // user.refreshToken = refreshToken;
-  await User.findOneAndUpdate({ userId }, { refreshToken, isLoggedIn: true,  lastLogin: new Date() });
-
+   await User.findOneAndUpdate({ userId }, { refreshToken, isLoggedIn: true,  lastLogin: new Date() });
   return res.status(200).json({ message: 'OTP verified',"userData":user, accessToken });
 }
 
