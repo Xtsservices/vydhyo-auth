@@ -4,6 +4,57 @@ const jwt = require('jsonwebtoken');
 const { generateAccessToken, generateRefreshToken } = require('../utils/token');
 const Sequence = require("../sequence/sequenceSchema");
 const { SEQUENCE_PREFIX } = require('../utils/constants')
+const axios = require('axios');
+
+const sendSMS = async (params) => {
+  try {
+    const url = "http://wecann.in/v3/api.php";
+
+    // Trigger the API using axios
+    const response = await axios.get(url, { params });
+
+    return response.data; // Return the API response
+  } catch (error) {
+    console.error("Error sending SMS:", error);
+    throw new Error("Failed to send SMS");
+  }
+};
+
+const sendOTPSMS = async (mobile, OTP) => {
+  const template =
+    "Dear {#var#} Kindly use this otp {#var#} for login to your Application . thank you Wecann";
+
+  // Function to populate the template with dynamic values
+  function populateTemplate(template, values) {
+    let index = 0;
+    return template.replace(/{#var#}/g, () => values[index++]);
+  }
+
+  // Populate the template with the user's name and OTP
+  const name = "user"; // Default name for the user
+  const message = populateTemplate(template, [name, OTP]);
+
+  // Example Output: Dear User, kindly use this OTP 123456 for login to your application. Thank you, Vydhyo.
+
+  const templateid = "1707163101087015490";
+
+  try {
+    const params = {
+      username: "WECANN",
+      apikey: process.env.SMSAPIKEY, // Use API key from environment variables
+      senderid: "WECANN",
+      mobile: mobile,
+      message: message,
+      templateid: templateid,
+    };
+
+    // Call the sendSMS function
+    return await sendSMS(params);
+  } catch (error) {
+    console.error("Error sending OTP SMS:", error);
+    throw new Error("Failed to send OTP SMS");
+  }
+};
 
 exports.validateOtp = async (req, res) => {
   const { userId, OTP: inputOtp } = req.body;
@@ -54,8 +105,8 @@ exports.login = async (req, res) => {
       await user.save();
     }
 
-  // const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-  const otpCode= '123456'
+  const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+  // const otpCode= '123456'
   const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
   const saveOtp = new OTPVerification({
     otp: otpCode,
@@ -66,6 +117,12 @@ exports.login = async (req, res) => {
     updatedAt: new Date()
   });
   await saveOtp.save();
+   try {
+    await sendOTPSMS(mobile, otpCode);
+  } catch (error) {
+    console.error('Failed to send OTP:', error);
+    return res.status(500).json({ message: 'Failed to send OTP' });
+  }
   // await sendOtp(mobile, otp);
   res.status(200).json({ message: 'OTP sent successfully', userId: user.userId, expiresAt: expiresAt });
 };
