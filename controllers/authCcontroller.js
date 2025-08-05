@@ -21,9 +21,10 @@ const sendSMS = async (params) => {
 };
 
 const sendOTPSMS = async (mobile, OTP) => {
-  const template =
+  const template2 =
     "Dear {#var#} Kindly use this otp {#var#} for login to your Application . thank you Wecann";
 
+    const template = "Dear {#var#} Kindly use this {#var#} otp For Login . thank You For choosing - Vydhyo"
   // Function to populate the template with dynamic values
   function populateTemplate(template, values) {
     let index = 0;
@@ -36,13 +37,13 @@ const sendOTPSMS = async (mobile, OTP) => {
 
   // Example Output: Dear User, kindly use this OTP 123456 for login to your application. Thank you, Vydhyo.
 
-  const templateid = "1707163101087015490";
+  const templateid = "1707175429493821675";
 
   try {
     const params = {
-      username: "WECANN",
+      username: "VYDHYO",
       apikey: process.env.SMSAPIKEY, // Use API key from environment variables
-      senderid: "WECANN",
+      senderid: "VYDHYO",
       mobile: mobile,
       message: message,
       templateid: templateid,
@@ -74,7 +75,7 @@ exports.validateOtp = async (req, res) => {
 }
 
 exports.login = async (req, res) => {
-  const { mobile, userType, language } = req.body;
+  const { mobile, userType, language,status } = req.body;
   let user = await User.findOne({ mobile , isDeleted:false });
    // If user does not exist and no userType is provided, throw error
   if (!user && !userType) {
@@ -89,7 +90,7 @@ exports.login = async (req, res) => {
       role: userType,
       userId: userId,
       appLanguage: language,
-      status: 'inActive',
+      status: status || 'inActive',
       isVerified: false,
       isDeleted: false,
       createdBy: userId,
