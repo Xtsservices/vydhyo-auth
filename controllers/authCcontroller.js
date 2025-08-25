@@ -5,6 +5,7 @@ const { generateAccessToken, generateRefreshToken } = require('../utils/token');
 const Sequence = require("../sequence/sequenceSchema");
 const { SEQUENCE_PREFIX } = require('../utils/constants')
 const axios = require('axios');
+const referralDetailsModel = require('../models/referralDetailsModel');
 
 const sendSMS = async (params) => {
   try {
@@ -24,7 +25,7 @@ const sendOTPSMS = async (mobile, OTP) => {
   const template2 =
     "Dear {#var#} Kindly use this otp {#var#} for login to your Application . thank you Wecann";
 
-    const template = "Dear {#var#} Kindly use this {#var#} otp For Login . thank You For choosing - Vydhyo"
+  const template = "Dear {#var#} Kindly use this {#var#} otp For Login . thank You For choosing - Vydhyo"
   // Function to populate the template with dynamic values
   function populateTemplate(template, values) {
     let index = 0;
@@ -62,44 +63,72 @@ exports.validateOtp = async (req, res) => {
   const latestOTPRecord = await OTPVerification.findOne({ userId }).sort({ createdAt: -1 });
   if (!latestOTPRecord) return res.status(401).json({ message: 'OTP expired...' });
   if (new Date() > latestOTPRecord.expiresAt) return res.status(410).json({ message: 'OTP expired...!' });
-  if (latestOTPRecord.otp !== inputOtp) return res.status(400).json({ message: 'Invalid OTP' });  
-  
+  if (latestOTPRecord.otp !== inputOtp) return res.status(400).json({ message: 'Invalid OTP' });
+
   const user = await User.findOne({ userId });
   const payload = { userid: user.userId, mobile: user.mobile, role: user.role, appLanguage: user.appLanguage };
   const accessToken = generateAccessToken(payload);
   const refreshToken = generateRefreshToken(payload);
 
   // user.refreshToken = refreshToken;
-   await User.findOneAndUpdate({ userId }, { refreshToken, isLoggedIn: true,  lastLogin: new Date() });
-  return res.status(200).json({ message: 'OTP verified',"userData":user, accessToken });
+  await User.findOneAndUpdate({ userId }, { refreshToken, isLoggedIn: true, lastLogin: new Date() });
+  return res.status(200).json({ message: 'OTP verified', "userData": user, accessToken });
 }
 
 exports.login = async (req, res) => {
-  const { mobile, userType, language,status } = req.body;
-  let user = await User.findOne({ mobile , isDeleted:false });
-   // If user does not exist and no userType is provided, throw error
-  if (!user && !userType) {
-    return res.status(404).json({ message: 'User not found' });
-  }
-  
-  if (!user && userType) {
-    const counter = await Sequence.findByIdAndUpdate({ _id: SEQUENCE_PREFIX.USERSEQUENCE.USER_MODEL }, { $inc: { seq: 1 } }, { new: true, upsert: true });
-    const userId = SEQUENCE_PREFIX.USERSEQUENCE.SEQUENCE.concat(counter.seq);
-    user = new User({
-      mobile,
-      role: userType,
-      userId: userId,
-      appLanguage: language,
-      status: status || 'inActive',
-      isVerified: false,
-      isDeleted: false,
-      createdBy: userId,
-      updatedBy: userId,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    });
-    await user.save();
-  }else {
+
+  try {
+    const { mobile, userType, language, status, referralCode } = req.body;
+    let user = await User.findOne({ mobile, isDeleted: false });
+    // If user does not exist and no userType is provided, throw error
+    if (!user && !userType) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (!user && userType) {
+      const counter = await Sequence.findByIdAndUpdate({ _id: SEQUENCE_PREFIX.USERSEQUENCE.USER_MODEL }, { $inc: { seq: 1 } }, { new: true, upsert: true });
+      const userId = SEQUENCE_PREFIX.USERSEQUENCE.SEQUENCE.concat(counter.seq);
+
+      // Handle referral code
+      let referredBy = null;
+      if (referralCode) {
+        // Check if referral code belongs to an existing user
+        const referrer = await User.findOne({ referralCode: referralCode, isDeleted: false });
+          if (!referrer) {
+          return res
+            .status(400)
+            .json({ message: "Invalid referral code provided" });
+        }
+          referredBy = referrer.userId;
+
+          // ✅ Create referralDetails entry
+          await referralDetailsModel.create({
+            referralCode: referralCode,
+            referredBy: referrer.userId, // code owner
+            referredTo: userId,          // new user
+            status: "pending",           // default until action completed
+            rewardIssued: false,
+          });
+        
+      }
+
+
+      user = new User({
+        mobile,
+        role: userType,
+        userId: userId,
+        appLanguage: language,
+        status: status || 'inActive',
+        isVerified: false,
+        isDeleted: false,
+        createdBy: userId,
+        updatedBy: userId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        referredBy: referredBy
+      });
+      await user.save();
+    } else {
       // Update existing user's language or userType if needed
       user.appLanguage = language;
       user.updatedAt = new Date();
@@ -108,39 +137,42 @@ exports.login = async (req, res) => {
 
     let otpCode;
     if (mobile === '9052519059') {
-    otpCode = '123456'; // Fixed OTP for testing  
+      otpCode = '123456'; // Fixed OTP for testing  
     }
     else {
-   otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+      otpCode = Math.floor(100000 + Math.random() * 900000).toString();
     }
-  // const otpCode= '123456'
-  const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
-  const saveOtp = new OTPVerification({
-    otp: otpCode,
-    expiresAt,
-    userId: user.userId,
-    verified: false,
-    createdAt: new Date(),
-    updatedAt: new Date()
-  });
-  await saveOtp.save();
-   try {
-    await sendOTPSMS(mobile, otpCode);
+    // const otpCode= '123456'
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+    const saveOtp = new OTPVerification({
+      otp: otpCode,
+      expiresAt,
+      userId: user.userId,
+      verified: false,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+    await saveOtp.save();
+    try {
+      await sendOTPSMS(mobile, otpCode);
+    } catch (error) {
+      console.error('Failed to send OTP:', error);
+      return res.status(500).json({ message: 'Failed to send OTP' });
+    }
+    // await sendOtp(mobile, otp);
+    res.status(200).json({ message: 'OTP sent successfully', userId: user.userId, expiresAt: expiresAt });
   } catch (error) {
-    console.error('Failed to send OTP:', error);
-    return res.status(500).json({ message: 'Failed to send OTP' });
-  }
-  // await sendOtp(mobile, otp);
-  res.status(200).json({ message: 'OTP sent successfully', userId: user.userId, expiresAt: expiresAt });
-};
+    res.status(500).json({ message: 'Internal server error', error: error.message });
+  };
+}
 
 exports.refreshToken = async (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ message: 'Unauthorized... No refresh token provided' });
   try {
     const decoded = jwt.verify(token, process.env.REFRESH_TOKEN_SECRET);
-    const user = await User.findOne({'userId': decoded.userid});
-    if (!user || user.refreshToken !== token) return  res.status(403).json({ message: "Forbidden...", userId: user.userId});
+    const user = await User.findOne({ 'userId': decoded.userid });
+    if (!user || user.refreshToken !== token) return res.status(403).json({ message: "Forbidden...", userId: user.userId });
 
     const payload = { userid: user.userId, role: user.role, mobile: user.mobile, appLanguage: user.appLanguage };
     const newAccessToken = generateAccessToken(payload);
