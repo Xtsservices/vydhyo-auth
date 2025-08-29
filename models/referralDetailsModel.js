@@ -5,7 +5,7 @@ const referralDetailsSchema = new mongoose.Schema(
     referralCode: {
       type: String,
       required: true,
-      unique: true,
+      // unique: true,
       // Code generated for referral (belongs to referredBy user)
     },
 

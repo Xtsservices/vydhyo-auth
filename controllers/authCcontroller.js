@@ -246,3 +246,110 @@ exports.logout2 = async (req, res) => {
   res.clearCookie('refreshToken');
   res.sendStatus(204);
 };
+
+
+exports.getReferralDetails = async (req, res) => {
+   try {
+    const { referralCode } = req.params;
+      const { userId } = req.query;
+
+    if (!referralCode) {
+      return res.status(400).json({
+        status: "fail",
+        message: "Referral code is required",
+      });
+    }
+
+      let query = { referralCode };
+    if (userId) {
+      query.referredTo = userId;
+    }
+
+
+    // const referral = await referralDetailsModel.findOne({ referralCode }).lean();
+     const referrals = await referralDetailsModel
+      .find(query)
+      .sort({ createdAt: -1 }) // latest first
+      .lean();
+
+    // if (!referral) {
+    //   return res.status(404).json({
+    //     status: "fail",
+    //     message: "Referral code not found",
+    //   });
+    // }
+      // Prefer pending if exists
+    let referral = referrals.find(r => r.status === "pending") || referrals[0];
+
+    res.status(200).json({
+      status: "success",
+      data: referral,
+    });
+  } catch (error) {
+    console.error("Error fetching referral:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Server error",
+    });
+  }
+}
+
+// Update referral status to completed
+exports.updateReferralStatus = async (req, res) => {
+  try {
+    const { referralCode, referredTo } = req.params;
+
+    // Validate input
+    if (!referralCode || !referredTo) {
+      return res.status(400).json({
+        status: 'fail',
+        message: 'Referral code and referredTo user ID are required',
+      });
+    }
+
+    // Find referral
+    const referral = await referralDetailsModel.findOne({
+      referralCode,
+      referredTo
+    });
+
+    if (!referral) {
+      return res.status(404).json({
+        status: 'fail',
+        message: 'Referral not found or invalid for this user',
+      });
+    }
+
+    // Check if referral is already completed or rewarded
+    if (referral.status === 'completed' || referral.status === 'rewarded') {
+      return res.status(400).json({
+        status: 'fail',
+        message: `Referral already ${referral.status}`,
+      });
+    }
+
+    // Update referral status to completed
+    referral.status = 'completed';
+    const updatedReferral = await referral.save();
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'Referral status updated to completed',
+      data: {
+        referralCode: updatedReferral.referralCode,
+        referredBy: updatedReferral.referredBy,
+        referredTo: updatedReferral.referredTo,
+        status: updatedReferral.status,
+        updatedAt: updatedReferral.updatedAt
+      }
+    });
+
+  } catch (err) {
+    console.error('Error updating referral status:', err.message);
+    return res.status(500).json({
+      status: 'fail',
+      message: 'Error updating referral status',
+      error: err.message,
+    });
+  }
+};

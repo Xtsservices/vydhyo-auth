@@ -8,4 +8,8 @@ router.post('/validateOtp', authController.validateOtp);
 router.get('/refreshToken', authController.refreshToken);
 router.post('/logout', authController.logout);
 
+router.get('/referral/:referralCode', authController.getReferralDetails);
+router.patch('/referral/:referralCode/:referredTo', authController.updateReferralStatus);
+
+
 module.exports = router;
