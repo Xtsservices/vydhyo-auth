@@ -75,15 +75,19 @@ exports.validateOtp = async (req, res) => {
   return res.status(200).json({ message: 'OTP verified', "userData": user, accessToken });
 }
 
-exports.login = async (req, res) => {
+exports.login2 = async (req, res) => {
 
   try {
     const { mobile, userType, language, status, referralCode } = req.body;
     let user = await User.findOne({ mobile, isDeleted: false });
+     
+
     // If user does not exist and no userType is provided, throw error
     if (!user && !userType) {
       return res.status(404).json({ message: 'User not found' });
     }
+
+//user, userType  is  not matching
 
     if (!user && userType) {
       const counter = await Sequence.findByIdAndUpdate({ _id: SEQUENCE_PREFIX.USERSEQUENCE.USER_MODEL }, { $inc: { seq: 1 } }, { new: true, upsert: true });
@@ -111,7 +115,6 @@ exports.login = async (req, res) => {
           });
         
       }
-
 
       user = new User({
         mobile,
@@ -165,6 +168,108 @@ exports.login = async (req, res) => {
     res.status(500).json({ message: 'Internal server error', error: error.message });
   };
 }
+
+exports.login = async (req, res) => {
+  try {
+    const { mobile, userType, language, status, referralCode } = req.body;
+
+    let user;
+
+    // Case A: userType provided (doctor app or patient app)
+    if (userType) {
+      user = await User.findOne({ mobile, role: userType, isDeleted: false });
+
+      // If user with same mobile & role does not exist, create new user
+      if (!user) {
+       const counter = await Sequence.findByIdAndUpdate({ _id: SEQUENCE_PREFIX.USERSEQUENCE.USER_MODEL }, { $inc: { seq: 1 } }, { new: true, upsert: true });
+      const userId = SEQUENCE_PREFIX.USERSEQUENCE.SEQUENCE.concat(counter.seq);
+
+      // Handle referral code
+      let referredBy = null;
+      if (referralCode) {
+        // Check if referral code belongs to an existing user
+        const referrer = await User.findOne({ referralCode: referralCode, isDeleted: false });
+          if (!referrer) {
+          return res
+            .status(400)
+            .json({ message: "Invalid referral code provided" });
+        }
+          referredBy = referrer.userId;
+
+          // ✅ Create referralDetails entry
+          await referralDetailsModel.create({
+            referralCode: referralCode,
+            referredBy: referrer.userId, // code owner
+            referredTo: userId,          // new user
+            status: "pending",           // default until action completed
+            rewardIssued: false,
+          });
+        
+      }
+
+
+      user = new User({
+        mobile,
+        role: userType,
+        userId: userId,
+        appLanguage: language,
+        status: status || 'inActive',
+        isVerified: false,
+        isDeleted: false,
+        createdBy: userId,
+        updatedBy: userId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        referredBy: referredBy
+      });
+      await user.save();
+      } else {
+        // Update language if needed
+        user.appLanguage = language;
+        user.updatedAt = new Date();
+        await user.save();
+      }
+    } else {
+      // Case B: No userType (web login) → Prefer doctor account
+      user = await User.findOne({ mobile, isDeleted: false });
+      if (!user) {
+         return res.status(404).json({ message: 'User not found' });
+      }
+    }
+
+    // Generate OTP
+    let otpCode;
+    if (mobile === "9052519059") {
+      otpCode = "123456"; // Fixed OTP for testing
+    } else {
+      otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    }
+
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+    const saveOtp = new OTPVerification({
+      otp: otpCode,
+      expiresAt,
+      userId: user.userId,
+      verified: false,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+    await saveOtp.save();
+
+     try {
+      await sendOTPSMS(mobile, otpCode);
+    } catch (error) {
+      console.error('Failed to send OTP:', error);
+      return res.status(500).json({ message: 'Failed to send OTP' });
+    }
+    // await sendOtp(mobile, otp);
+    res.status(200).json({ message: 'OTP sent successfully', userId: user.userId, expiresAt: expiresAt });
+ 
+  } catch (error) {
+    res.status(500).json({ message: "Internal server error", error: error.message });
+  }
+};
+
 
 exports.refreshToken = async (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
