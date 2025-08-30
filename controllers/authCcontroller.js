@@ -231,10 +231,18 @@ exports.login = async (req, res) => {
       }
     } else {
       // Case B: No userType (web login) → Prefer doctor account
-      user = await User.findOne({ mobile, isDeleted: false });
-      if (!user) {
+      const users = await User.find({ mobile, isDeleted: false });
+
+  if (!users || users.length === 0) {
+    return res.status(404).json({ message: 'User not found' });
+  }
+   // Prefer non-patient role
+  const nonPatientUser = users.find(u => u.role !== "patient")
+      
+      if (!nonPatientUser) {
          return res.status(404).json({ message: 'User not found' });
       }
+       user = nonPatientUser;
     }
 
     // Generate OTP
