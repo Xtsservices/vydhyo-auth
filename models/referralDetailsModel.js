@@ -20,6 +20,10 @@ const referralDetailsSchema = new mongoose.Schema(
       default: null,
       // The new user who signs up using the code
     },
+    appointmentId: {
+      type: String, // e.g., "APP123456"
+      default: null, // Stores the appointment ID that used this referral
+    },
 
     status: {
       type: String,
