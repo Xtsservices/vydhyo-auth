@@ -72,6 +72,12 @@ exports.validateOtp = async (req, res) => {
 
   // user.refreshToken = refreshToken;
   await User.findOneAndUpdate({ userId }, { refreshToken, isLoggedIn: true, lastLogin: new Date() });
+  // ✅ Check if user registered with a referral
+   const referral = await referralDetailsModel.findOne({ referredTo: userId }).lean();
+    if (referral) {
+      user.usedReferralCode = referral.referralCode;        // 👈 new key
+      user.usedReferralCodeStatus = referral.status;        // 👈 new key
+    }
   return res.status(200).json({ message: 'OTP verified', "userData": user, accessToken });
 }
 
@@ -220,7 +226,8 @@ exports.login = async (req, res) => {
         updatedBy: userId,
         createdAt: new Date(),
         updatedAt: new Date(),
-        referredBy: referredBy
+        referredBy: referredBy,
+        usedReferralCode: referralCode,        // 👈 new key
       });
       await user.save();
       } else {
