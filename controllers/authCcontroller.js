@@ -1,11 +1,11 @@
-const User = require('../models/usersModel');
-const OTPVerification = require('../models/otpModels');
-const jwt = require('jsonwebtoken');
-const { generateAccessToken, generateRefreshToken } = require('../utils/token');
+const User = require("../models/usersModel");
+const OTPVerification = require("../models/otpModels");
+const jwt = require("jsonwebtoken");
+const { generateAccessToken, generateRefreshToken } = require("../utils/token");
 const Sequence = require("../sequence/sequenceSchema");
-const { SEQUENCE_PREFIX } = require('../utils/constants')
-const axios = require('axios');
-const referralDetailsModel = require('../models/referralDetailsModel');
+const { SEQUENCE_PREFIX } = require("../utils/constants");
+const axios = require("axios");
+const referralDetailsModel = require("../models/referralDetailsModel");
 
 const sendSMS = async (params) => {
   try {
@@ -25,7 +25,8 @@ const sendOTPSMS = async (mobile, OTP) => {
   const template2 =
     "Dear {#var#} Kindly use this otp {#var#} for login to your Application . thank you Wecann";
 
-  const template = "Dear {#var#} Kindly use this {#var#} otp For Login . thank You For choosing - Vydhyo"
+  const template =
+    "Dear {#var#} Kindly use this {#var#} otp For Login . thank You For choosing - Vydhyo";
   // Function to populate the template with dynamic values
   function populateTemplate(template, values) {
     let index = 0;
@@ -60,66 +61,87 @@ const sendOTPSMS = async (mobile, OTP) => {
 
 exports.validateOtp = async (req, res) => {
   const { userId, OTP: inputOtp } = req.body;
-  const latestOTPRecord = await OTPVerification.findOne({ userId }).sort({ createdAt: -1 });
-  if (!latestOTPRecord) return res.status(401).json({ message: 'OTP expired...' });
-  if (new Date() > latestOTPRecord.expiresAt) return res.status(410).json({ message: 'OTP expired...!' });
-  if (latestOTPRecord.otp !== inputOtp) return res.status(400).json({ message: 'Invalid OTP' });
+  const latestOTPRecord = await OTPVerification.findOne({ userId }).sort({
+    createdAt: -1,
+  });
+  if (!latestOTPRecord)
+    return res.status(401).json({ message: "OTP expired..." });
+  if (new Date() > latestOTPRecord.expiresAt)
+    return res.status(410).json({ message: "OTP expired...!" });
+  if (latestOTPRecord.otp !== inputOtp)
+    return res.status(400).json({ message: "Invalid OTP" });
 
   const user = await User.findOne({ userId });
-  const payload = { userid: user.userId, mobile: user.mobile, role: user.role, appLanguage: user.appLanguage };
+  const payload = {
+    userid: user.userId,
+    mobile: user.mobile,
+    role: user.role,
+    appLanguage: user.appLanguage,
+  };
   const accessToken = generateAccessToken(payload);
   const refreshToken = generateRefreshToken(payload);
 
   // user.refreshToken = refreshToken;
-  await User.findOneAndUpdate({ userId }, { refreshToken, isLoggedIn: true, lastLogin: new Date() });
+  await User.findOneAndUpdate(
+    { userId },
+    { refreshToken, isLoggedIn: true, lastLogin: new Date() }
+  );
   // ✅ Check if user registered with a referral
-   const referral = await referralDetailsModel.findOne({ referredTo: userId }).lean();
-    if (referral) {
-      user.usedReferralCode = referral.referralCode;        // 👈 new key
-      user.usedReferralCodeStatus = referral.status;        // 👈 new key
-    }
-  return res.status(200).json({ message: 'OTP verified', "userData": user, accessToken });
-}
+  const referral = await referralDetailsModel
+    .findOne({ referredTo: userId })
+    .lean();
+  if (referral) {
+    user.usedReferralCode = referral.referralCode; // 👈 new key
+    user.usedReferralCodeStatus = referral.status; // 👈 new key
+  }
+  return res
+    .status(200)
+    .json({ message: "OTP verified", userData: user, accessToken });
+};
 
 exports.login2 = async (req, res) => {
-
   try {
     const { mobile, userType, language, status, referralCode } = req.body;
     let user = await User.findOne({ mobile, isDeleted: false });
-     
 
     // If user does not exist and no userType is provided, throw error
     if (!user && !userType) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ message: "User not found" });
     }
 
-//user, userType  is  not matching
+    //user, userType  is  not matching
 
     if (!user && userType) {
-      const counter = await Sequence.findByIdAndUpdate({ _id: SEQUENCE_PREFIX.USERSEQUENCE.USER_MODEL }, { $inc: { seq: 1 } }, { new: true, upsert: true });
+      const counter = await Sequence.findByIdAndUpdate(
+        { _id: SEQUENCE_PREFIX.USERSEQUENCE.USER_MODEL },
+        { $inc: { seq: 1 } },
+        { new: true, upsert: true }
+      );
       const userId = SEQUENCE_PREFIX.USERSEQUENCE.SEQUENCE.concat(counter.seq);
 
       // Handle referral code
       let referredBy = null;
       if (referralCode) {
         // Check if referral code belongs to an existing user
-        const referrer = await User.findOne({ referralCode: referralCode, isDeleted: false });
-          if (!referrer) {
+        const referrer = await User.findOne({
+          referralCode: referralCode,
+          isDeleted: false,
+        });
+        if (!referrer) {
           return res
             .status(400)
             .json({ message: "Invalid referral code provided" });
         }
-          referredBy = referrer.userId;
+        referredBy = referrer.userId;
 
-          // ✅ Create referralDetails entry
-          await referralDetailsModel.create({
-            referralCode: referralCode,
-            referredBy: referrer.userId, // code owner
-            referredTo: userId,          // new user
-            status: "pending",           // default until action completed
-            rewardIssued: false,
-          });
-        
+        // ✅ Create referralDetails entry
+        await referralDetailsModel.create({
+          referralCode: referralCode,
+          referredBy: referrer.userId, // code owner
+          referredTo: userId, // new user
+          status: "pending", // default until action completed
+          rewardIssued: false,
+        });
       }
 
       user = new User({
@@ -127,14 +149,14 @@ exports.login2 = async (req, res) => {
         role: userType,
         userId: userId,
         appLanguage: language,
-        status: status || 'inActive',
+        status: status || "inActive",
         isVerified: false,
         isDeleted: false,
         createdBy: userId,
         updatedBy: userId,
         createdAt: new Date(),
         updatedAt: new Date(),
-        referredBy: referredBy
+        referredBy: referredBy,
       });
       await user.save();
     } else {
@@ -145,10 +167,9 @@ exports.login2 = async (req, res) => {
     }
 
     let otpCode;
-    if (mobile === '9052519059') {
-      otpCode = '123456'; // Fixed OTP for testing  
-    }
-    else {
+    if (mobile === "9052519059") {
+      otpCode = "123456"; // Fixed OTP for testing
+    } else {
       otpCode = Math.floor(100000 + Math.random() * 900000).toString();
     }
     // const otpCode= '123456'
@@ -159,25 +180,33 @@ exports.login2 = async (req, res) => {
       userId: user.userId,
       verified: false,
       createdAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
     });
     await saveOtp.save();
     try {
       await sendOTPSMS(mobile, otpCode);
     } catch (error) {
-      console.error('Failed to send OTP:', error);
-      return res.status(500).json({ message: 'Failed to send OTP' });
+      console.error("Failed to send OTP:", error);
+      return res.status(500).json({ message: "Failed to send OTP" });
     }
     // await sendOtp(mobile, otp);
-    res.status(200).json({ message: 'OTP sent successfully', userId: user.userId, expiresAt: expiresAt });
+    res
+      .status(200)
+      .json({
+        message: "OTP sent successfully",
+        userId: user.userId,
+        expiresAt: expiresAt,
+      });
   } catch (error) {
-    res.status(500).json({ message: 'Internal server error', error: error.message });
-  };
-}
+    res
+      .status(500)
+      .json({ message: "Internal server error", error: error.message });
+  }
+};
 
 exports.login = async (req, res) => {
   try {
-    const { mobile, userType, language, status, referralCode } = req.body;
+    const { mobile, userType, language, status, referralCode, userFrom } = req.body;
 
     let user;
 
@@ -187,49 +216,57 @@ exports.login = async (req, res) => {
 
       // If user with same mobile & role does not exist, create new user
       if (!user) {
-       const counter = await Sequence.findByIdAndUpdate({ _id: SEQUENCE_PREFIX.USERSEQUENCE.USER_MODEL }, { $inc: { seq: 1 } }, { new: true, upsert: true });
-      const userId = SEQUENCE_PREFIX.USERSEQUENCE.SEQUENCE.concat(counter.seq);
+        const counter = await Sequence.findByIdAndUpdate(
+          { _id: SEQUENCE_PREFIX.USERSEQUENCE.USER_MODEL },
+          { $inc: { seq: 1 } },
+          { new: true, upsert: true }
+        );
+        const userId = SEQUENCE_PREFIX.USERSEQUENCE.SEQUENCE.concat(
+          counter.seq
+        );
 
-      // Handle referral code
-      let referredBy = null;
-      if (referralCode) {
-        // Check if referral code belongs to an existing user
-        const referrer = await User.findOne({ referralCode: referralCode, isDeleted: false });
+        // Handle referral code
+        let referredBy = null;
+        if (referralCode) {
+          // Check if referral code belongs to an existing user
+          const referrer = await User.findOne({
+            referralCode: referralCode,
+            isDeleted: false,
+          });
           if (!referrer) {
-          return res
-            .status(400)
-            .json({ message: "Invalid referral code provided" });
-        }
+            return res
+              .status(400)
+              .json({ message: "Invalid referral code provided" });
+          }
           referredBy = referrer.userId;
 
           // ✅ Create referralDetails entry
           await referralDetailsModel.create({
             referralCode: referralCode,
             referredBy: referrer.userId, // code owner
-            referredTo: userId,          // new user
-            status: "pending",           // default until action completed
+            referredTo: userId, // new user
+            status: "pending", // default until action completed
             rewardIssued: false,
           });
-        
-      }
+        }
 
-
-      user = new User({
-        mobile,
-        role: userType,
-        userId: userId,
-        appLanguage: language,
-        status: status || 'inActive',
-        isVerified: false,
-        isDeleted: false,
-        createdBy: userId,
-        updatedBy: userId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        referredBy: referredBy,
-        usedReferralCode: referralCode,        // 👈 new key
-      });
-      await user.save();
+        user = new User({
+          mobile,
+          userFrom: userFrom,
+          role: userType,
+          userId: userId,
+          appLanguage: language,
+          status: status || "inActive",
+          isVerified: false,
+          isDeleted: false,
+          createdBy: userId,
+          updatedBy: userId,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          referredBy: referredBy,
+          usedReferralCode: referralCode, // 👈 new key
+        });
+        await user.save();
       } else {
         // Update language if needed
         user.appLanguage = language;
@@ -240,17 +277,17 @@ exports.login = async (req, res) => {
       // Case B: No userType (web login) → Prefer doctor account
       const users = await User.find({ mobile, isDeleted: false });
 
-  if (!users || users.length === 0) {
-    return res.status(404).json({ message: 'User not found' });
-  }
-  
-   // Prefer non-patient role
-  const nonPatientUser = users.find(u => u.role !== "patient")
-      
-      if (!nonPatientUser) {
-         return res.status(404).json({ message: 'User not found' });
+      if (!users || users.length === 0) {
+        return res.status(404).json({ message: "User not found" });
       }
-       user = nonPatientUser;
+
+      // Prefer non-patient role
+      const nonPatientUser = users.find((u) => u.role !== "patient");
+
+      if (!nonPatientUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      user = nonPatientUser;
     }
 
     // Generate OTP
@@ -268,41 +305,127 @@ exports.login = async (req, res) => {
       userId: user.userId,
       verified: false,
       createdAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
     });
     await saveOtp.save();
 
-     try {
+    try {
       await sendOTPSMS(mobile, otpCode);
     } catch (error) {
-      console.error('Failed to send OTP:', error);
-      return res.status(500).json({ message: 'Failed to send OTP' });
+      console.error("Failed to send OTP:", error);
+      return res.status(500).json({ message: "Failed to send OTP" });
     }
     // await sendOtp(mobile, otp);
-    res.status(200).json({ message: 'OTP sent successfully', userId: user.userId, expiresAt: expiresAt });
- 
+    res
+      .status(200)
+      .json({
+        message: "OTP sent successfully",
+        userId: user.userId,
+        expiresAt: expiresAt,
+      });
   } catch (error) {
-    res.status(500).json({ message: "Internal server error", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Internal server error", error: error.message });
   }
 };
 
+// whatsappuser: If mobile not found, create user and send details; else send user details
+exports.whatsappuser = async (req, res) => {
+  try {
+    const { mobile, userType = "patient", status, firstname, lastname } = req.body;
+
+    if (!mobile) {
+      return res.status(400).json({ message: "Mobile number is required" });
+    }
+
+    // Check if user already exists
+    let user = await User.findOne({
+      mobile: mobile,
+      role: userType,
+      isDeleted: false,
+    });
+
+    // If user not found, create new user
+    if (!user) {
+      const counter = await Sequence.findByIdAndUpdate(
+        { _id: SEQUENCE_PREFIX.USERSEQUENCE.USER_MODEL },
+        { $inc: { seq: 1 } },
+        { new: true, upsert: true }
+      );
+
+      const userId = SEQUENCE_PREFIX.USERSEQUENCE.SEQUENCE.concat(counter.seq);
+
+      user = new User({
+        mobile,
+        role: userType,
+        userId: userId,
+        firstname: firstname,
+        lastname: lastname,
+        appLanguage: "en",
+        status: status,
+        isVerified: true,
+        isDeleted: false,
+        createdBy: userId,
+        updatedBy: userId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        referredBy: null, // keep null unless passed from req
+      });
+
+      await user.save();
+    } else {
+      // Update only relevant fields
+      user.status = status;
+      user.updatedAt = new Date();
+      await user.save();
+    }
+
+    // Send user details as response
+    return res.status(200).json({
+      message: "User found or created successfully",
+      user,
+    });
+  } catch (error) {
+    console.error("Error in whatsappuser:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
 
 exports.refreshToken = async (req, res) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).json({ message: 'Unauthorized... No refresh token provided' });
+  const token = req.headers.authorization?.split(" ")[1];
+  if (!token)
+    return res
+      .status(401)
+      .json({ message: "Unauthorized... No refresh token provided" });
   try {
     const decoded = jwt.verify(token, process.env.REFRESH_TOKEN_SECRET);
-    const user = await User.findOne({ 'userId': decoded.userid });
-    if (!user || user.refreshToken !== token) return res.status(403).json({ message: "Forbidden...", userId: user.userId });
+    const user = await User.findOne({ userId: decoded.userid });
+    if (!user || user.refreshToken !== token)
+      return res
+        .status(403)
+        .json({ message: "Forbidden...", userId: user.userId });
 
-    const payload = { userid: user.userId, role: user.role, mobile: user.mobile, appLanguage: user.appLanguage };
+    const payload = {
+      userid: user.userId,
+      role: user.role,
+      mobile: user.mobile,
+      appLanguage: user.appLanguage,
+    };
     const newAccessToken = generateAccessToken(payload);
     return res.status(200).json({ accessToken: newAccessToken });
   } catch (err) {
-    return res.status(403).json({ message: 'Forbidden... Invalid refresh token', Error: err.message });
+    return res
+      .status(403)
+      .json({
+        message: "Forbidden... Invalid refresh token",
+        Error: err.message,
+      });
   }
 };
-
 
 exports.logout = async (req, res) => {
   try {
@@ -311,8 +434,8 @@ exports.logout = async (req, res) => {
     // Validate userId
     if (!userId) {
       return res.status(400).json({
-        status: 'fail',
-        message: 'userId is required in headers'
+        status: "fail",
+        message: "userId is required in headers",
       });
     }
 
@@ -320,8 +443,8 @@ exports.logout = async (req, res) => {
     const user = await User.findOne({ userId });
     if (!user) {
       return res.status(404).json({
-        status: 'fail',
-        message: 'User not found'
+        status: "fail",
+        message: "User not found",
       });
     }
 
@@ -332,30 +455,29 @@ exports.logout = async (req, res) => {
         isLoggedIn: false,
         refreshToken: null,
         lastLogout: new Date(), // Set to current timestamp when logout is triggered
-
       },
       { new: true }
     );
 
     return res.status(200).json({
-      status: 'success',
-      message: 'Logout successful',
+      status: "success",
+      message: "Logout successful",
       data: {
         userId: user.userId,
         isLoggedIn: false,
-        lastLogout: updatedUser.lastLogout
-      }
+        lastLogout: updatedUser.lastLogout,
+      },
     });
   } catch (error) {
     return res.status(500).json({
-      status: 'fail',
-      message: error.message || 'Internal server error'
+      status: "fail",
+      message: error.message || "Internal server error",
     });
   }
 };
 
 exports.logout2 = async (req, res) => {
-  const token = req.headers.refreshtoken?.split(' ')[1];
+  const token = req.headers.refreshtoken?.split(" ")[1];
   if (token) {
     const decoded = jwt.decode(token);
     if (decoded?.id) {
@@ -364,15 +486,14 @@ exports.logout2 = async (req, res) => {
     }
   }
 
-  res.clearCookie('refreshToken');
+  res.clearCookie("refreshToken");
   res.sendStatus(204);
 };
 
-
 exports.getReferralDetails = async (req, res) => {
-   try {
+  try {
     const { referralCode } = req.params;
-      const { userId } = req.query;
+    const { userId } = req.query;
 
     if (!referralCode) {
       return res.status(400).json({
@@ -381,14 +502,13 @@ exports.getReferralDetails = async (req, res) => {
       });
     }
 
-      let query = { referralCode };
+    let query = { referralCode };
     if (userId) {
       query.referredTo = userId;
     }
 
-
     // const referral = await referralDetailsModel.findOne({ referralCode }).lean();
-     const referrals = await referralDetailsModel
+    const referrals = await referralDetailsModel
       .find(query)
       .sort({ createdAt: -1 }) // latest first
       .lean();
@@ -399,8 +519,9 @@ exports.getReferralDetails = async (req, res) => {
     //     message: "Referral code not found",
     //   });
     // }
-      // Prefer pending if exists
-    let referral = referrals.find(r => r.status === "pending") || referrals[0];
+    // Prefer pending if exists
+    let referral =
+      referrals.find((r) => r.status === "pending") || referrals[0];
 
     res.status(200).json({
       status: "success",
@@ -413,71 +534,69 @@ exports.getReferralDetails = async (req, res) => {
       message: "Server error",
     });
   }
-}
+};
 
 // Update referral status to completed
 exports.updateReferralStatus = async (req, res) => {
   try {
     const { referralCode, referredTo } = req.params;
-      const { status, appointmentId } = req.body;
+    const { status, appointmentId } = req.body;
 
     // Validate input
     if (!referralCode || !referredTo) {
       return res.status(400).json({
-        status: 'fail',
-        message: 'Referral code and referredTo user ID are required',
+        status: "fail",
+        message: "Referral code and referredTo user ID are required",
       });
     }
 
     // Find referral
     const referral = await referralDetailsModel.findOne({
       referralCode,
-      referredTo
+      referredTo,
     });
 
     if (!referral) {
       return res.status(404).json({
-        status: 'fail',
-        message: 'Referral not found or invalid for this user',
+        status: "fail",
+        message: "Referral not found or invalid for this user",
       });
     }
 
     // Check if referral is already completed or rewarded
-    if (referral.status === 'completed' || referral.status === 'rewarded') {
+    if (referral.status === "completed" || referral.status === "rewarded") {
       return res.status(400).json({
-        status: 'fail',
+        status: "fail",
         message: `Referral already ${referral.status}`,
       });
     }
 
     // Update referral status to completed
-    referral.status = 'completed';
+    referral.status = "completed";
     referral.appointmentId = appointmentId;
     const updatedReferral = await referral.save();
 
     return res.status(200).json({
-      status: 'success',
-      message: 'Referral status updated to completed',
+      status: "success",
+      message: "Referral status updated to completed",
       data: {
         referralCode: updatedReferral.referralCode,
         referredBy: updatedReferral.referredBy,
         referredTo: updatedReferral.referredTo,
-         appointmentId: updatedReferral.appointmentId,
+        appointmentId: updatedReferral.appointmentId,
         status: updatedReferral.status,
-        updatedAt: updatedReferral.updatedAt
-      }
+        updatedAt: updatedReferral.updatedAt,
+      },
     });
-
   } catch (err) {
-    console.error('Error updating referral status:', err.message);
+    console.error("Error updating referral status:", err.message);
     return res.status(500).json({
-      status: 'fail',
-      message: 'Error updating referral status',
+      status: "fail",
+      message: "Error updating referral status",
       error: err.message,
     });
   }
 };
-
 
 exports.getReferralByCodeAndAppointment = async (req, res) => {
   try {
@@ -486,8 +605,8 @@ exports.getReferralByCodeAndAppointment = async (req, res) => {
     // Validate input
     if (!referralCode || !appointmentId) {
       return res.status(400).json({
-        status: 'fail',
-        message: 'Referral code and appointment ID are required',
+        status: "fail",
+        message: "Referral code and appointment ID are required",
       });
     }
 
@@ -499,14 +618,14 @@ exports.getReferralByCodeAndAppointment = async (req, res) => {
 
     if (!referral) {
       return res.status(404).json({
-        status: 'fail',
-        message: 'Referral not found for the given code and appointment ID',
+        status: "fail",
+        message: "Referral not found for the given code and appointment ID",
       });
     }
 
     return res.status(200).json({
-      status: 'success',
-      message: 'Referral found',
+      status: "success",
+      message: "Referral found",
       data: {
         referralCode: referral.referralCode,
         referredBy: referral.referredBy,
@@ -519,15 +638,14 @@ exports.getReferralByCodeAndAppointment = async (req, res) => {
       },
     });
   } catch (err) {
-    console.error('Error fetching referral:', err.message);
+    console.error("Error fetching referral:", err.message);
     return res.status(500).json({
-      status: 'fail',
-      message: 'Error fetching referral',
+      status: "fail",
+      message: "Error fetching referral",
       error: err.message,
     });
   }
 };
-
 
 exports.updateReferralStatusByCodeAndAppointment = async (req, res) => {
   try {
@@ -537,22 +655,22 @@ exports.updateReferralStatusByCodeAndAppointment = async (req, res) => {
     // Validate input
     if (!referralCode || !appointmentId) {
       return res.status(400).json({
-        status: 'fail',
-        message: 'Referral code and appointment ID are required',
+        status: "fail",
+        message: "Referral code and appointment ID are required",
       });
     }
 
-    if (!status || status !== 'rewarded') {
+    if (!status || status !== "rewarded") {
       return res.status(400).json({
-        status: 'fail',
+        status: "fail",
         message: 'Status must be "rewarded"',
       });
     }
 
     if (rewardIssued !== true) {
       return res.status(400).json({
-        status: 'fail',
-        message: 'rewardIssued must be true',
+        status: "fail",
+        message: "rewardIssued must be true",
       });
     }
 
@@ -564,23 +682,23 @@ exports.updateReferralStatusByCodeAndAppointment = async (req, res) => {
 
     if (!referral) {
       return res.status(404).json({
-        status: 'fail',
-        message: 'Referral not found for the given code and appointment ID',
+        status: "fail",
+        message: "Referral not found for the given code and appointment ID",
       });
     }
 
     // Validate referral state
-    if (referral.status !== 'completed') {
+    if (referral.status !== "completed") {
       return res.status(400).json({
-        status: 'fail',
+        status: "fail",
         message: `Referral must be in "completed" state, current status: ${referral.status}`,
       });
     }
 
     if (referral.rewardIssued) {
       return res.status(400).json({
-        status: 'fail',
-        message: 'Referral reward already issued',
+        status: "fail",
+        message: "Referral reward already issued",
       });
     }
 
@@ -591,8 +709,8 @@ exports.updateReferralStatusByCodeAndAppointment = async (req, res) => {
     const updatedReferral = await referral.save();
 
     return res.status(200).json({
-      status: 'success',
-      message: 'Referral status updated to rewarded',
+      status: "success",
+      message: "Referral status updated to rewarded",
       data: {
         referralCode: updatedReferral.referralCode,
         referredBy: updatedReferral.referredBy,
@@ -604,10 +722,10 @@ exports.updateReferralStatusByCodeAndAppointment = async (req, res) => {
       },
     });
   } catch (err) {
-    console.error('Error updating referral status:', err.message);
+    console.error("Error updating referral status:", err.message);
     return res.status(500).json({
-      status: 'fail',
-      message: 'Error updating referral status',
+      status: "fail",
+      message: "Error updating referral status",
       error: err.message,
     });
   }
