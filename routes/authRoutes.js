@@ -11,7 +11,7 @@ router.post('/logout', authController.logout);
 router.get('/referral/:referralCode', authController.getReferralDetails);
 router.patch('/referral/:referralCode/:referredTo', authController.updateReferralStatus);
 router.get('/referral/:referralCode/:appointmentId', authController.getReferralByCodeAndAppointment);
-router.patch('/referral/:referralCode/:appointmentId', authController.updateReferralStatusByCodeAndAppointment);
+router.patch('/referralCode/:referralCode/:appointmentId', authController.updateReferralStatusByCodeAndAppointment);
 
 
 

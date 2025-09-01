@@ -531,9 +531,9 @@ exports.getReferralByCodeAndAppointment = async (req, res) => {
 
 exports.updateReferralStatusByCodeAndAppointment = async (req, res) => {
   try {
+
     const { referralCode, appointmentId } = req.params;
     const { status, rewardIssued } = req.body;
-
     // Validate input
     if (!referralCode || !appointmentId) {
       return res.status(400).json({
@@ -555,20 +555,17 @@ exports.updateReferralStatusByCodeAndAppointment = async (req, res) => {
         message: 'rewardIssued must be true',
       });
     }
-
     // Find referral
     const referral = await referralDetailsModel.findOne({
       referralCode,
       appointmentId,
     });
-
     if (!referral) {
       return res.status(404).json({
         status: 'fail',
         message: 'Referral not found for the given code and appointment ID',
       });
     }
-
     // Validate referral state
     if (referral.status !== 'completed') {
       return res.status(400).json({
@@ -583,7 +580,6 @@ exports.updateReferralStatusByCodeAndAppointment = async (req, res) => {
         message: 'Referral reward already issued',
       });
     }
-
     // Update referral
     referral.status = status;
     referral.rewardIssued = rewardIssued;
