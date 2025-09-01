@@ -333,7 +333,7 @@ exports.login = async (req, res) => {
 // whatsappuser: If mobile not found, create user and send details; else send user details
 exports.whatsappuser = async (req, res) => {
   try {
-    const { mobile, userType = "patient", status, firstname, lastname } = req.body;
+    const { mobile, userType = "patient", status, firstname, lastname ,userFrom} = req.body;
 
     if (!mobile) {
       return res.status(400).json({ message: "Mobile number is required" });
@@ -358,6 +358,7 @@ exports.whatsappuser = async (req, res) => {
 
       user = new User({
         mobile,
+        userFrom:userFrom,
         role: userType,
         userId: userId,
         firstname: firstname,
