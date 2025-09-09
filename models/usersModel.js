@@ -134,6 +134,10 @@ const userSchema = new mongoose.Schema({
   userFrom: {
     type: String,
     default: null
+  },
+  isFirstLogin: {
+    type: Boolean,
+    default: true
   }
 });
 
