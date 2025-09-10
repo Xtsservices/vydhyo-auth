@@ -212,7 +212,18 @@ exports.login = async (req, res) => {
 
     // Case A: userType provided (doctor app or patient app)
     if (userType) {
-      user = await User.findOne({ mobile, role: userType, isDeleted: false });
+
+      if (userType === "doctor") {
+        // Doctor app login → allow doctor, receptionist, etc. (not patient or superadmin)
+        user = await User.findOne({
+          mobile,
+          role: { $nin: ["patient", "superadmin"] },
+          isDeleted: false,
+        });
+      } else {
+
+         user = await User.findOne({ mobile, role: userType, isDeleted: false });
+      }
 
       // If user with same mobile & role does not exist, create new user
       if (!user) {
