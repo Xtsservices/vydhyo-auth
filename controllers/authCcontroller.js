@@ -329,11 +329,11 @@ exports.login = async (req, res) => {
     //   return res.status(500).json({ message: "Failed to send OTP" });
     // }
     // await sendOtp(mobile, otp);
-    
+
     // Send OTP asynchronously ( Fire-and-forget SMS sending)
-sendOTPSMS(mobile, otpCode).catch((err) => {
-  console.error("Failed to send OTP:", err);
-});
+// sendOTPSMS(mobile, otpCode).catch((err) => {
+//   console.error("Failed to send OTP:", err);
+// });
     res
       .status(200)
       .json({
@@ -341,6 +341,9 @@ sendOTPSMS(mobile, otpCode).catch((err) => {
         userId: user.userId,
         expiresAt: expiresAt,
       });
+      sendOTPSMS(mobile, otpCode)
+  .then(() => console.log(`OTP sent to ${mobile}`))
+  .catch((err) => console.error("Failed to send OTP:", err));
   } catch (error) {
     res
       .status(500)
