@@ -322,13 +322,18 @@ exports.login = async (req, res) => {
     });
     await saveOtp.save();
 
-    try {
-      await sendOTPSMS(mobile, otpCode);
-    } catch (error) {
-      console.error("Failed to send OTP:", error);
-      return res.status(500).json({ message: "Failed to send OTP" });
-    }
+    // try {
+    //   await sendOTPSMS(mobile, otpCode);
+    // } catch (error) {
+    //   console.error("Failed to send OTP:", error);
+    //   return res.status(500).json({ message: "Failed to send OTP" });
+    // }
     // await sendOtp(mobile, otp);
+    
+    // Send OTP asynchronously ( Fire-and-forget SMS sending)
+sendOTPSMS(mobile, otpCode).catch((err) => {
+  console.error("Failed to send OTP:", err);
+});
     res
       .status(200)
       .json({
