@@ -331,9 +331,12 @@ exports.login = async (req, res) => {
     // await sendOtp(mobile, otp);
 
     // Send OTP asynchronously ( Fire-and-forget SMS sending)
-// sendOTPSMS(mobile, otpCode).catch((err) => {
-//   console.error("Failed to send OTP:", err);
-// });
+if (mobile !== "9052519059") {
+  // optional: call sendOTPSMS for real numbers
+  sendOTPSMS(mobile, otpCode).catch((err) => {
+    console.error("Failed to send OTP:", err);
+  });
+}
     res
       .status(200)
       .json({
@@ -341,9 +344,7 @@ exports.login = async (req, res) => {
         userId: user.userId,
         expiresAt: expiresAt,
       });
-      sendOTPSMS(mobile, otpCode)
-  .then(() => console.log(`OTP sent to ${mobile}`))
-  .catch((err) => console.error("Failed to send OTP:", err));
+     
   } catch (error) {
     res
       .status(500)
