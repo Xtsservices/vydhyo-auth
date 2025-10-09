@@ -388,7 +388,6 @@ exports.doctorLogin = async (req, res) => {
         updatedBy: userId,
         createdAt: new Date(),
         updatedAt: new Date(),
-        referredBy: referredBy,
       });
       await user.save();
     } 
