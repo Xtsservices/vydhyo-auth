@@ -4,6 +4,7 @@ const authController = require('../controllers/authCcontroller');
 
 
 router.post('/login', authController.login);
+router.post('/doctorLogin', authController.doctorLogin); //temp login for doctor app with static number
 router.post('/whatsappuser', authController.whatsappuser);
 router.post('/validateOtp', authController.validateOtp);
 router.get('/refreshToken', authController.refreshToken);

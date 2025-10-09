@@ -352,6 +352,75 @@ if (mobile !== "9052519059") {
   }
 };
 
+//temp login for doctor app with static number
+exports.doctorLogin = async (req, res) => {
+  try {
+    const { mobile, userType, language } = req.body;
+    if (!mobile || !userType) {
+      return res.status(400).json({ message: "Mobile and userType are required" });
+    }
+    let user = await User.findOne({ mobile,  role: userType, isDeleted: false });
+
+    // If user does not exist and no userType is provided, throw error
+    if (!user && !userType) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    //user, userType  is  not matching
+
+    if (!user && userType) {
+      const counter = await Sequence.findByIdAndUpdate(
+        { _id: SEQUENCE_PREFIX.USERSEQUENCE.USER_MODEL },
+        { $inc: { seq: 1 } },
+        { new: true, upsert: true }
+      );
+      const userId = SEQUENCE_PREFIX.USERSEQUENCE.SEQUENCE.concat(counter.seq);
+
+      user = new User({
+        mobile,
+        role: userType,
+        userId: userId,
+        appLanguage: language,
+        status:  "inActive",
+        isVerified: false,
+        isDeleted: false,
+        createdBy: userId,
+        updatedBy: userId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        referredBy: referredBy,
+      });
+      await user.save();
+    } 
+
+    let otpCode = "123456";;
+   
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+    const saveOtp = new OTPVerification({
+      otp: otpCode,
+      expiresAt,
+      userId: user.userId,
+      verified: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    await saveOtp.save();
+   
+    // await sendOtp(mobile, otp);
+    res
+      .status(200)
+      .json({
+        message: "OTP sent successfully",
+        userId: user.userId,
+        expiresAt: expiresAt,
+      });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Internal server error", error: error.message });
+  }
+};
+
 // whatsappuser: If mobile not found, create user and send details; else send user details
 exports.whatsappuser = async (req, res) => {
   try {
